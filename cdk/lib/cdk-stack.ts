@@ -1,14 +1,12 @@
+import * as path from 'path';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { UserPool, UserPoolClient } from 'aws-cdk-lib/aws-cognito';
+import { UserPool } from 'aws-cdk-lib/aws-cognito';
 import { BlockPublicAccess, Bucket, BucketEncryption } from 'aws-cdk-lib/aws-s3';
 import { OriginAccessIdentity, CloudFrontWebDistribution } from 'aws-cdk-lib/aws-cloudfront';
-import path = require('path');
 import { BucketDeployment, Source } from 'aws-cdk-lib/aws-s3-deployment';
 import { NodejsBuild } from 'deploy-time-build';
 import { readFileSync } from 'fs';
-import { App } from '@aws-cdk/aws-amplify-alpha';
-import { execSync } from 'child_process';
 
 export class CdkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -16,10 +14,10 @@ export class CdkStack extends cdk.Stack {
 
     const userPool = new UserPool(this, 'UserPool', {
       passwordPolicy: {
-        requireUppercase: true,
-        requireSymbols: true,
-        requireDigits: true,
-        minLength: 8,
+        requireUppercase: false,
+        requireSymbols: false,
+        requireDigits: false,
+        minLength: 6,
       },
       selfSignUpEnabled: true,
       signInAliases: {
@@ -36,6 +34,7 @@ export class CdkStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'UserPoolClientId', { value: client.userPoolClientId });
 
     {
+      // 1. Build locally
       const parent = new Construct(this, 'LocalBuild');
       const assetBucket = new Bucket(parent, 'AssetBucket', {
         encryption: BucketEncryption.S3_MANAGED,
@@ -83,6 +82,7 @@ export class CdkStack extends cdk.Stack {
           Source.asset(path.join('..', 'frontend'), {
             bundling: {
               image: cdk.DockerImage.fromRegistry('node:18'),
+              // build frontend assets locally during cdk synth
               command: ['sh', '-c', `npm install && npm run build && cp -r out/. /asset-output`],
               user: 'root',
             },
@@ -95,6 +95,7 @@ export class CdkStack extends cdk.Stack {
     }
 
     {
+      // 2. Build locally but inject environment variables on runtime
       const parent = new Construct(this, 'RuntimeConfig');
       const assetBucket = new Bucket(parent, 'AssetBucket', {
         encryption: BucketEncryption.S3_MANAGED,
@@ -153,6 +154,7 @@ export class CdkStack extends cdk.Stack {
     }
 
     {
+      // Build on deploy time
       const parent = new Construct(this, 'DeployTimeBuild');
       const assetBucket = new Bucket(parent, 'AssetBucket', {
         encryption: BucketEncryption.S3_MANAGED,
@@ -214,10 +216,6 @@ export class CdkStack extends cdk.Stack {
         },
       });
     }
-    // {
-    //   const amplifyApp = new App(this, 'MyApp', {});
-    //   const branch = amplifyApp.addBranch('dev', { asset: asset });
-    // }
     const arn = 'arn:aws:apprunner:us-east-1:123456789012:service/SERVICE_NAME/SERVICE_ID';
     /**
      * Cloudformaton does not return the serviceName attribute so we extract it from the serviceArn.
