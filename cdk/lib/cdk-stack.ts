@@ -80,6 +80,8 @@ export class CdkStack extends cdk.Stack {
       const deployment = new BucketDeployment(parent, 'DeployWebsite', {
         sources: [
           Source.asset(path.join('..', 'frontend'), {
+            // To build frontend assets properly,
+            // you need to populate frontend/.env.local file with the deployed backend attributes first
             bundling: {
               image: cdk.DockerImage.fromRegistry('node:18'),
               // build frontend assets locally during cdk synth
@@ -140,7 +142,14 @@ export class CdkStack extends cdk.Stack {
 
       const deployment = new BucketDeployment(parent, 'DeployWebsite', {
         sources: [
-          Source.asset(path.join('..', 'frontend-runtime-config/out')),
+          Source.asset(path.join('..', 'frontend-runtime-config'), {
+            bundling: {
+              image: cdk.DockerImage.fromRegistry('node:18'),
+              // build frontend assets locally during cdk synth
+              command: ['sh', '-c', `npm install && npm run build && cp -r out/. /asset-output`],
+              user: 'root',
+            },
+          }),
           Source.jsonData('aws-config.json', {
             region: cdk.Stack.of(this).region,
             userPoolId: userPool.userPoolId,
@@ -213,10 +222,10 @@ export class CdkStack extends cdk.Stack {
           NEXT_PUBLIC_AWS_REGION: cdk.Stack.of(this).region,
           NEXT_PUBLIC_USER_POOL_ID: userPool.userPoolId,
           NEXT_PUBLIC_USER_POOL_CLIENT_ID: client.userPoolClientId,
+          NEXT_PUBLIC_TITLE: 'Deploy Time Build',
         },
       });
     }
-    const arn = 'arn:aws:apprunner:us-east-1:123456789012:service/SERVICE_NAME/SERVICE_ID';
     /**
      * Cloudformaton does not return the serviceName attribute so we extract it from the serviceArn.
      * The ARN comes with this format:

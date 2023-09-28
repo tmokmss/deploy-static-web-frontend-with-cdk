@@ -1,9 +1,10 @@
-# Frontend demo for runtime environment variables injection
-## Run locally
+# Frontend demo
+## Build / Run locally
 ```sh
-cp aws-config.example.json aws-config.json
-# Fills aws-config.json with the actual values
+cp .env.local.example .env.local
+# Fills .env.local with the actual values
 
 npm ci
-npm run dev
+npm run build # build
+npm run dev # run
 ```
