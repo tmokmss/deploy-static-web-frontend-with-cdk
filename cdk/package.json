@@ -20,7 +20,6 @@
     "typescript": "~5.2.2"
   },
   "dependencies": {
-    "@aws-cdk/aws-amplify-alpha": "^2.94.0-alpha.0",
     "aws-cdk-lib": "^2.94.0",
     "constructs": "^10.0.0",
     "deploy-time-build": "^0.3.7",

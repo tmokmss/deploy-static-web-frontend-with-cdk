@@ -3,9 +3,11 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { UserPool } from 'aws-cdk-lib/aws-cognito';
 import { BlockPublicAccess, Bucket, BucketEncryption } from 'aws-cdk-lib/aws-s3';
-import { OriginAccessIdentity, CloudFrontWebDistribution } from 'aws-cdk-lib/aws-cloudfront';
+import { OriginAccessIdentity } from 'aws-cdk-lib/aws-cloudfront';
 import { BucketDeployment, Source } from 'aws-cdk-lib/aws-s3-deployment';
 import { NodejsBuild } from 'deploy-time-build';
+import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
+import { S3Origin } from 'aws-cdk-lib/aws-cloudfront-origins';
 import { readFileSync } from 'fs';
 
 export class CdkStack extends cdk.Stack {
@@ -45,35 +47,19 @@ export class CdkStack extends cdk.Stack {
       });
 
       const originAccessIdentity = new OriginAccessIdentity(parent, 'OriginAccessIdentity');
-      const distribution = new CloudFrontWebDistribution(parent, 'Distribution', {
-        originConfigs: [
-          {
-            s3OriginSource: {
-              s3BucketSource: assetBucket,
-              originAccessIdentity,
-            },
-            behaviors: [
-              {
-                isDefaultBehavior: true,
-              },
-            ],
-          },
-        ],
-        errorConfigurations: [
-          {
-            errorCode: 404,
-            errorCachingMinTtl: 0,
-            responseCode: 200,
-            responsePagePath: '/',
-          },
-          {
-            errorCode: 403,
-            errorCachingMinTtl: 0,
-            responseCode: 200,
-            responsePagePath: '/',
-          },
-        ],
+      const distribution = new cloudfront.Distribution(parent, 'Distribution', {
+        defaultRootObject: 'index.html',
+        defaultBehavior: {
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          origin: new S3Origin(assetBucket, {
+            originAccessIdentity,
+          }),
+        },
       });
+      // If you have child pages, you need to rewrite requests as the following:
+      // GET /child -> GET /child/index.html
+      // You can use Lambda@Edge or CloudFront Function to rewrite requests.
+      // CloudFront Functions example: https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/example-function-add-index.html
 
       new cdk.CfnOutput(parent, 'FrontendUrl', { value: `https://${distribution.distributionDomainName}` });
 
@@ -108,36 +94,15 @@ export class CdkStack extends cdk.Stack {
       });
 
       const originAccessIdentity = new OriginAccessIdentity(parent, 'OriginAccessIdentity');
-      const distribution = new CloudFrontWebDistribution(parent, 'Distribution', {
-        originConfigs: [
-          {
-            s3OriginSource: {
-              s3BucketSource: assetBucket,
-              originAccessIdentity,
-            },
-            behaviors: [
-              {
-                isDefaultBehavior: true,
-              },
-            ],
-          },
-        ],
-        errorConfigurations: [
-          {
-            errorCode: 404,
-            errorCachingMinTtl: 0,
-            responseCode: 200,
-            responsePagePath: '/',
-          },
-          {
-            errorCode: 403,
-            errorCachingMinTtl: 0,
-            responseCode: 200,
-            responsePagePath: '/',
-          },
-        ],
+      const distribution = new cloudfront.Distribution(parent, 'Distribution', {
+        defaultRootObject: 'index.html',
+        defaultBehavior: {
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          origin: new S3Origin(assetBucket, {
+            originAccessIdentity,
+          }),
+        },
       });
-
       new cdk.CfnOutput(parent, 'FrontendUrl', { value: `https://${distribution.distributionDomainName}` });
 
       const deployment = new BucketDeployment(parent, 'DeployWebsite', {
@@ -174,34 +139,14 @@ export class CdkStack extends cdk.Stack {
       });
 
       const originAccessIdentity = new OriginAccessIdentity(parent, 'OriginAccessIdentity');
-      const distribution = new CloudFrontWebDistribution(parent, 'Distribution', {
-        originConfigs: [
-          {
-            s3OriginSource: {
-              s3BucketSource: assetBucket,
-              originAccessIdentity,
-            },
-            behaviors: [
-              {
-                isDefaultBehavior: true,
-              },
-            ],
-          },
-        ],
-        errorConfigurations: [
-          {
-            errorCode: 404,
-            errorCachingMinTtl: 0,
-            responseCode: 200,
-            responsePagePath: '/',
-          },
-          {
-            errorCode: 403,
-            errorCachingMinTtl: 0,
-            responseCode: 200,
-            responsePagePath: '/',
-          },
-        ],
+      const distribution = new cloudfront.Distribution(parent, 'Distribution', {
+        defaultRootObject: 'index.html',
+        defaultBehavior: {
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          origin: new S3Origin(assetBucket, {
+            originAccessIdentity,
+          }),
+        },
       });
 
       new cdk.CfnOutput(parent, 'FrontendUrl', { value: `https://${distribution.distributionDomainName}` });
